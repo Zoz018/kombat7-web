@@ -1,0 +1,53 @@
+Moove du jeu combat 7 :
+
+Sami : 
+Mouvement : 
+Saut : classique peut être double avec salto avant
+Vers le bas : position pompe
+Course : Nage dans le sol 
+Bouclier en forme d'enceinte (Boombox)
+
+Attaques :
+A : Coup de poing classique
+B : Neutral : Notes de guitare (Selon le rythme noir, croche, double croche, blanche, ronde) 
+    Cotés : Nage dans le sol puis met un coup en sautant 
+    Haut : Basketball met un dunk en montant très haut 
+
+Matthis :
+Mouvement : 
+Saut : classique 
+Vers le bas : Assis par terre
+Course :
+
+Attaques : 
+A : Coup de poing classique 
+B : Neutral : Shuriken 
+    Cotés : Wakeboard 
+    Bas : Contre avec un drapeau Corse 
+
+Léo : 
+Mouvement : 
+Marche avec un sac a dos 
+Attaques : 
+A : Crochet 
+B : Cotés : Appel une voiture qui vient le chercher en stop (Si rester enfoncé il monte dans la voiture sinon elle passe)
+    Neutral : Envoi un flash d'appareil photo en mode laser 
+
+Julien : 
+Mouvement :
+A : Coup de poing très rapide 
+B : Neutral : Gun avec drapeau américain
+    Cotés : Saute dans un karting puis roule 
+    Bas : Contre en mode Toad pour peach avec Capu 
+
+Enzo : 
+A : Uppercut
+B : Neutral : Ballon de volley 
+    Cotés : Ski 
+    Bas : ( Hockey sur glace )
+    Haut : Skate en mode rampe vers le haut ou basket comme Sami 
+
+
+
+CTRL ALT SHIFT E pour importer en tant que GIF 
+Le I de studio grenouille = Mouche que james attrape

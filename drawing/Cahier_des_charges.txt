@@ -1,0 +1,39 @@
+Cahier des charges Kombat 7 
+
+Note : Joueur = Celui qui joue au jeu , Personnage = Celui qui est joué par le joueur 
+
+Partie 1 : Écran Start 
+
+Tout d'abord on se situe sur l'écran start (Start_Screen_Kombat7)
+le press start clignote indiquant aux joueur d'appuyer sur la touche start de sa manette ou espace du clavier
+
+Partie 2 Sélection du personnage :
+
+Une fois que le joueur a appuyé sur start il se retrouve sur l'écran de sélection des personnages (Selection_Kombat7_Card) 
+Chaque manettes (ou manette/clavier ou claviers(ouais je te fais chier)) contrôle un des joueurs qui doit alors sélectionner un personnages, on peut se balader entre les personnages 
+Les cadres J1 et J2 clignotent 
+
+Partie 3 Sélection du pays :
+
+Une fois que le joueur a sélectionné un personnage, les drapeaux du personnage apparaissent à l'endroit où le personnage habite ou alors dans un pays où des skins sont disponible
+(Pas fait encore les drapeaux mais ça va arriver) 
+
+Partie 4 Sélection du skin :
+
+Aucun skin n'est disponible pour le moment mais possibilité de choisir un skin après avoir sélectionné le pays, une fois le skin sélectionné la partie se lance
+Le bouton aléatoire sélectionne tout les trucs précédents de manière aléatoire
+
+Partie 5 Écran de lancement de la partie : 
+
+Pas encore dessiné ça AAAAAAAAAAAAAAAAAAAAH
+
+Partie 6 Le jeu de combat : 
+
+Beaucoup de travail encore sur ça mais peut-être commencer à voir comment faire un système de combat style street fighter avec barre de vie 
+
+Fichier de dessin disponible : 
+- Cartes des personnages
+- Personnage complet (Que le S pour l'instant)
+- Contour J1 et J2
+- Écran Start 
+- Écran de sélection des personnages comme je le vois (tu peux récupérer la carte du monde dessus) 
