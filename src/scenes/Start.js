@@ -1,6 +1,6 @@
-import Phaser from 'phaser';
-
+﻿import Phaser from 'phaser';
 import { Controls } from '../controls.js';
+import { music, sfx } from '../audio.js';
 
 // Écran Start (Others/Start_Screen.aseprite). Le "PRESS START" dessiné dans l'image est masqué puis clignote.
 export class Start extends Phaser.Scene {
@@ -20,17 +20,19 @@ export class Start extends Phaser.Scene {
 
     this.controls = [new Controls(this, 0), new Controls(this, 1)];
     this.go = false;
+    music(this, 'music_menu');
   }
 
   update(_, delta) {
     this.blink += delta;
     this.press.setVisible(Math.floor(this.blink / 500) % 2 === 0);
     for (const c of this.controls) c.poll();
-    const any = this.controls.some((c) => c.pressed.start || c.pressed.jab || c.pressed.special);
-    if (any && !this.go) {
+    if (this.controls.some((c) => c.pressed.start || c.pressed.jab || c.pressed.special) && !this.go) {
       this.go = true;
+      sfx(this, 'start');
       this.cameras.main.fadeOut(250, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Select'));
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Mode'));
     }
   }
 }
+

@@ -45,6 +45,15 @@ export const ROSTER = {
 
 export const CHARS = Object.keys(ROSTER);
 
+// Drapeaux sur la carte de l'écran de sélection : (x, y) = pied du mât, dir = côté où flotte le drapeau.
+export const FLAG_POS = {
+  Enzo: { x: 496, y: 82, dir: -1 },    // France, près de Toulouse
+  Matthis: { x: 507, y: 90, dir: 1 },  // Corse
+  Sami: { x: 481, y: 101, dir: -1 },   // Maroc, vers Tanger
+  Julien: { x: 386, y: 81, dir: 1 },   // USA, vers New York
+  Leo: { x: 375, y: 233, dir: 1 },     // Chili, vers Santiago
+};
+
 // Grille de sélection (comme dans Selection_Card.aseprite)
 export const GRID = [
   ['Enzo', 'Leo', 'Matthis'],

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "assets": "python3 tools/build_assets.py",
+    "sounds": "python3 tools/build_sounds.py",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"

@@ -1,8 +1,17 @@
 import Phaser from 'phaser';
-import { W, H, FLOOR, FONT, ROSTER, MAX_HP, ROUND_TIME, ROUNDS_TO_WIN } from '../config.js';
+import { W, H, FONT, ROSTER, MAX_HP, ROUND_TIME, ROUNDS_TO_WIN } from '../config.js';
 import { Controls } from '../controls.js';
+import { AIControls } from '../ai.js';
 import { Fighter } from '../fighter.js';
 import { Puppet } from '../anim.js';
+import { music, sfx, setMusicVolume } from '../audio.js';
+
+const PAUSE_ITEMS = [
+  { id: 'resume', label: 'REPRENDRE' },
+  { id: 'keys', label: 'TOUCHES' },
+  { id: 'select', label: 'CHANGER DE PERSOS' },
+  { id: 'menu', label: 'MENU PRINCIPAL' },
+];
 
 const overlap = (a, b) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
 
@@ -14,46 +23,33 @@ export class Fight extends Phaser.Scene {
   create() {
     this.cameras.main.fadeIn(200, 0, 0, 0);
     this.drawStage();
-    this.controls = [new Controls(this, 0), new Controls(this, 1)];
+    const vsAI = this.registry.get('mode') === 'ai';
+    this.controls = [new Controls(this, 0), vsAI ? new AIControls(this) : new Controls(this, 1)];
     this.f = [
       new Fighter(this, this.sel.p1, 0, this.controls[0], 330),
       new Fighter(this, this.sel.p2, 1, this.controls[1], W - 330),
     ];
+    if (vsAI) this.controls[1].setFighters(this.f[1], this.f[0]);
     this.wins = [0, 0];
     this.round = 1;
     this.hitstop = 0;
+    this.lastTick = 99;
+    music(this, 'music_fight', 0.4);
     this.buildHud();
     this.startRound();
-    this.input.keyboard.on('keydown-ESC', () => this.scene.start('Select'));
+    this.paused = false;
+    this.leaving = false;
+    this.buildPause();
+    this.input.keyboard.on('keydown-ESC', () => this.togglePause());
+    this.input.keyboard.on('keydown-P', () => this.togglePause());
   }
 
-  // --- décor (en attendant un vrai stage dessiné) -------------------------------------------------
+  // --- décor ---------------------------------------------------------------------------------
   drawStage() {
-    const g = this.add.graphics().setDepth(-10);
-    g.fillGradientStyle(0x1d2b53, 0x1d2b53, 0xe58a5c, 0xe58a5c, 1);
-    g.fillRect(0, 0, W, FLOOR);
-    g.fillStyle(0xffd27a, 1).fillCircle(760, 250, 70);
-    g.fillStyle(0xffe6a8, 1).fillCircle(760, 250, 52);
-    // skyline
-    g.fillStyle(0x3a3355, 1);
-    const rnd = new Phaser.Math.RandomDataGenerator(['kombat7']);
-    for (let x = 0; x < W; x += 46) {
-      const h = 60 + rnd.between(0, 120);
-      g.fillRect(x, FLOOR - h, 42, h);
-    }
-    g.fillStyle(0x2a2540, 1);
-    for (let x = 20; x < W; x += 70) {
-      const h = 40 + rnd.between(0, 90);
-      g.fillRect(x, FLOOR - h, 56, h);
-    }
-    // sol
-    g.fillGradientStyle(0x6a5b72, 0x6a5b72, 0x2b2336, 0x2b2336, 1);
-    g.fillRect(0, FLOOR, W, H - FLOOR);
-    g.lineStyle(2, 0x000000, 0.35);
-    g.lineBetween(0, FLOOR, W, FLOOR);
-    for (let x = -200; x < W + 200; x += 80) g.lineBetween(x + (x - 512) * 0.25, H, x, FLOOR);
-    g.lineStyle(2, 0x000000, 0.25);
-    g.lineBetween(0, FLOOR + 26, W, FLOOR + 26);
+    // churros.png (683x455) agrandi pour couvrir l'écran, calé pour que le sol soit sous les pieds des combattants
+    const bg = this.add.image(W / 2, 0, 'churros').setOrigin(0.5, 0).setDepth(-10);
+    bg.setScale(Math.max(W / bg.width, H / bg.height));
+    bg.y = Math.min(0, H - bg.displayHeight) * 0.65;
   }
 
   // --- HUD -------------------------------------------------------------------------------------
@@ -84,7 +80,7 @@ export class Fight extends Phaser.Scene {
       }
     }
     this.banner = this.add.text(W / 2, H / 2 - 40, '', {
-      fontFamily: FONT, fontSize: '72px', color: '#ffe35a', stroke: '#000', strokeThickness: 12, fontStyle: 'bold', align: 'center',
+      fontFamily: FONT, fontSize: '72px', color: '#ff0000', stroke: '#000', strokeThickness: 12, fontStyle: 'bold', align: 'center',
     }).setOrigin(0.5).setDepth(40).setVisible(false);
     this.sub = this.add.text(W / 2, H / 2 + 40, '', {
       fontFamily: FONT, fontSize: '20px', color: '#ffffff', stroke: '#000', strokeThickness: 5, align: 'center',
@@ -110,18 +106,85 @@ export class Fight extends Phaser.Scene {
   updateHud() {
     for (let i = 0; i < 2; i++) {
       this.setBar(i, this.f[i].hp / MAX_HP);
-      this.pips[i].forEach((c, k) => c.setFillStyle(k < this.wins[i] ? 0xffe35a : 0x222222));
+      this.pips[i].forEach((c, k) => c.setFillStyle(k < this.wins[i] ? 0xff0000 : 0x222222));
     }
     this.timerText.setText(String(Math.max(0, Math.ceil(this.timeLeft ?? ROUND_TIME))));
   }
 
-  announce(text, sub = '', color = '#ffe35a') {
+  announce(text, sub = '', color = '#ff0000') {
     this.banner.setText(text).setColor(color).setVisible(true).setScale(0.3).setAlpha(1);
     this.tweens.add({ targets: this.banner, scale: 1, duration: 220, ease: 'Back.easeOut' });
     this.sub.setText(sub).setVisible(!!sub);
   }
 
   hideBanner() { this.banner.setVisible(false); this.sub.setVisible(false); }
+
+  // --- pause -----------------------------------------------------------------------------------
+  buildPause() {
+    // bouton "II" cliquable en bas à droite (touches : P ou Échap)
+    const btn = this.add.container(W - 28, H - 28).setDepth(25);
+    btn.add(this.add.circle(0, 0, 15, 0x000000, 0.65).setStrokeStyle(3, 0xffffff));
+    btn.add(this.add.rectangle(-4, 0, 4, 14, 0xffffff));
+    btn.add(this.add.rectangle(4, 0, 4, 14, 0xffffff));
+    btn.setSize(34, 34).setInteractive({ useHandCursor: true });
+    btn.on('pointerdown', () => this.togglePause());
+
+    const st = (size, color = '#ffffff') => ({ fontFamily: FONT, fontSize: `${size}px`, color, fontStyle: 'bold' });
+    const objs = [this.add.rectangle(0, 0, W, H, 0x000000, 0.7).setOrigin(0)];
+    objs.push(this.add.text(W / 2, 70, 'PAUSE', { ...st(52, '#ff0000'), stroke: '#000', strokeThickness: 8 }).setOrigin(0.5));
+    this.pauseItems = PAUSE_ITEMS.map((it, i) => {
+      const t = this.add.text(W / 2, 150 + i * 46, it.label, st(26)).setOrigin(0.5);
+      t.setInteractive({ useHandCursor: true });
+      t.on('pointerover', () => { this.pauseSel = i; this.refreshPause(); });
+      t.on('pointerdown', () => { this.pauseSel = i; this.refreshPause(); this.pauseChoose(); });
+      objs.push(t);
+      return t;
+    });
+    this.keysPanel = this.add.container(0, 0, [
+      this.add.rectangle(0, 0, W, H, 0x000000, 0.92).setOrigin(0),
+      this.add.text(W / 2, 40, 'TOUCHES', { ...st(30, '#ff0000') }).setOrigin(0.5, 0),
+      this.add.text(120, 100, ['JOUEUR 1', '', 'Déplacer   Q / D', 'Sauter     Z', 'Baisser    S', 'Poing (A)  F', 'Spécial (B) G', 'Bloquer    tenir la direction', '           opposée à l\'adversaire'].join('\n'),
+        { fontFamily: FONT, fontSize: '16px', color: '#ff8a8a', lineSpacing: 6 }),
+      this.add.text(W - 120, 100, ['JOUEUR 2', '', 'Déplacer   ← / →', 'Sauter     ↑', 'Baisser    ↓', 'Poing (A)  K (pavé num. 1)', 'Spécial (B) L (pavé num. 2)', 'Bloquer    idem'].join('\n'),
+        { fontFamily: FONT, fontSize: '16px', color: '#9fb4ff', lineSpacing: 6 }).setOrigin(1, 0),
+      this.add.text(W / 2, H - 50, 'Pause : P ou Échap  ·  Retour : spécial / Échap', { fontFamily: FONT, fontSize: '14px', color: '#cfd8dc' }).setOrigin(0.5),
+    ]).setVisible(false);
+    objs.push(this.keysPanel);
+    this.pauseMenu = this.add.container(0, 0, objs).setDepth(60).setVisible(false);
+    this.pauseSel = 0;
+    this.refreshPause();
+  }
+
+  refreshPause() {
+    this.pauseItems.forEach((t, i) => {
+      t.setColor(i === this.pauseSel ? '#ff0000' : '#ffffff');
+      t.setText((i === this.pauseSel ? '> ' : '  ') + PAUSE_ITEMS[i].label);
+    });
+  }
+
+  togglePause() {
+    if (this.leaving) return;
+    if (this.paused && this.keysPanel.visible) { this.keysPanel.setVisible(false); return; }
+    if (!this.paused && this.phase === 'over') return;
+    this.paused = !this.paused;
+    sfx(this, 'pause');
+    this.pauseMenu.setVisible(this.paused);
+    if (this.paused) { this.pauseSel = 0; this.refreshPause(); this.tweens.pauseAll(); this.time.paused = true; setMusicVolume(this, 0.15); }
+    else { this.tweens.resumeAll(); this.time.paused = false; setMusicVolume(this, 0.4); }
+  }
+
+  pauseChoose() {
+    const id = PAUSE_ITEMS[this.pauseSel].id;
+    if (id === 'resume') return this.togglePause();
+    if (id === 'keys') { this.keysPanel.setVisible(true); return undefined; }
+    this.leaving = true;
+    sfx(this, 'menu_ok');
+    this.tweens.resumeAll();
+    this.time.paused = false;
+    if (id === 'select') this.scene.start('Select');
+    else this.scene.start('Start');
+    return undefined;
+  }
 
   // --- manches ---------------------------------------------------------------------------------
   startRound() {
@@ -132,6 +195,7 @@ export class Fight extends Phaser.Scene {
     this.phaseT = 0;
     this.slowmo = 1;
     this.announce(`MANCHE ${this.round}`);
+    sfx(this, 'round');
     this.updateHud();
   }
 
@@ -143,6 +207,7 @@ export class Fight extends Phaser.Scene {
     this.winner = winner;
     const label = winner >= 0 ? '' : 'ÉGALITÉ';
     this.announce(winner >= 0 && this.f[winner === 0 ? 1 : 0].hp <= 0 ? 'K.O.' : (label || 'TEMPS !'), '', '#ff5a4a');
+    if (this.banner.text === 'K.O.') sfx(this, 'ko', 0.9);
     this.updateHud();
   }
 
@@ -151,14 +216,28 @@ export class Fight extends Phaser.Scene {
     this.phaseT = 0;
     const w = this.wins[0] > this.wins[1] ? 0 : 1;
     const name = [this.sel.p1, this.sel.p2][w];
-    this.announce(`${ROSTER[name].label} GAGNE !`, `J${w + 1}    ·    Poing : rejouer    ·    Spécial : choisir d'autres persos`);
+    this.announce(`${ROSTER[name].label} GAGNE !`, w === 1 && this.registry.get('mode') === 'ai' ? 'IA' : `J${w + 1}`);
     this.f[w].win();
     this.puppet = null;
+    music(this, 'music_win', 0.5, false);
   }
 
   // --- boucle ----------------------------------------------------------------------------------
   update(_, delta) {
-    for (const c of this.controls) c.poll();
+    for (const c of this.controls) c.poll(delta);
+    if (this.paused) {
+      const pr = (a) => this.controls.some((c) => c.pressed[a]);
+      if (this.keysPanel.visible) {
+        if (pr('special')) this.keysPanel.setVisible(false);
+        return;
+      }
+      if (pr('up')) { this.pauseSel = (this.pauseSel + PAUSE_ITEMS.length - 1) % PAUSE_ITEMS.length; this.refreshPause(); sfx(this, 'menu_move'); }
+      if (pr('down')) { this.pauseSel = (this.pauseSel + 1) % PAUSE_ITEMS.length; this.refreshPause(); sfx(this, 'menu_move'); }
+      if (pr('jab') || pr('start')) this.pauseChoose();
+      else if (pr('special')) this.togglePause();
+      return;
+    }
+    if (this.controls.some((c) => c.pressed.start) && this.phase !== 'over') { this.togglePause(); return; }
     let dt = Math.min(delta, 33);
 
     if (this.hitstop > 0) {
@@ -171,7 +250,7 @@ export class Fight extends Phaser.Scene {
 
     const canAct = this.phase === 'fight';
     if (this.phase === 'intro') {
-      if (this.phaseT > 1000 && this.banner.text !== 'FIGHT !') this.announce('FIGHT !', '', '#ff5a4a');
+      if (this.phaseT > 1000 && this.banner.text !== 'FIGHT !') { this.announce('FIGHT !', '', '#ff5a4a'); sfx(this, 'fight', 0.8); }
       if (this.phaseT > 1700) { this.hideBanner(); this.phase = 'fight'; }
     }
 
@@ -183,6 +262,8 @@ export class Fight extends Phaser.Scene {
 
     if (this.phase === 'fight') {
       this.timeLeft -= dt / 1000;
+      const sec = Math.ceil(this.timeLeft);
+      if (sec <= 5 && sec > 0 && sec < this.lastTick) { this.lastTick = sec; sfx(this, 'tick', 0.5); }
       if (this.f[0].hp <= 0 || this.f[1].hp <= 0) {
         const w = this.f[0].hp <= 0 && this.f[1].hp <= 0 ? -1 : this.f[0].hp <= 0 ? 1 : 0;
         if (w >= 0) this.f[w].win();
@@ -244,6 +325,7 @@ export class Fight extends Phaser.Scene {
       const hx = (Math.max(box.l, def.hurtbox().l) + Math.min(box.r, def.hurtbox().r)) / 2;
       const hy = def.y - def.meta.bodyH * 0.6;
       this.spark(hx, hy, res === 'block' ? 0x9fc4ff : spec ? 0xffa500 : 0xffffff);
+      sfx(this, res === 'block' ? 'block' : spec ? 'hit_special' : 'hit', 0.8);
       if (res !== 'block') {
         this.hitstop = spec ? 90 : 55;
         this.cameras.main.shake(spec ? 160 : 90, spec ? 0.007 : 0.003);

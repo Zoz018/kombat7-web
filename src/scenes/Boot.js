@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { W, H, CHARS, FONT } from '../config.js';
+import { loadAudio } from '../audio.js';
 
 // Charge meta.json puis tous les assets générés par tools/build_assets.py
 export class Boot extends Phaser.Scene {
@@ -27,10 +28,13 @@ export class Preload extends Phaser.Scene {
       const m = meta[c];
       this.load.spritesheet(`char_${c}`, `assets/char_${c}.png`, { frameWidth: m.fw, frameHeight: m.fh });
       this.load.image(`card_${c}`, `assets/card_${c}.png`);
+      this.load.image(`flag_${c}`, `assets/flag_${c}.png`);
     }
+    loadAudio(this);
     this.load.image('start', 'assets/start.png');
     this.load.image('select_bg', 'assets/select_bg.png');
     this.load.image('life', 'assets/life.png');
+    this.load.image('churros', 'assets/churros.png');
     this.load.image('card_1p', 'assets/card_1p.png');
     this.load.image('card_2p', 'assets/card_2p.png');
     this.load.image('versus_bg', 'assets/versus_bg.png');

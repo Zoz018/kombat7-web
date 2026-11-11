@@ -1,6 +1,7 @@
 import { FLOOR, ARENA_L, ARENA_R, MAX_HP, ROSTER } from './config.js';
 import { frameAt, tagMs, flipFor } from './anim.js';
 import { NEUTRAL } from './controls.js';
+import { sfx } from './audio.js';
 
 const GRAV = 2300;
 const JUMP_V = 860;
@@ -91,6 +92,7 @@ export class Fighter {
   }
 
   startAttack(kind) {
+    sfx(this.scene, kind === 'Jab' ? 'swing' : 'special', kind === 'Jab' ? 0.5 : 0.6);
     this.state = kind === 'Jab' ? 'jab' : 'special';
     this.atk = kind === 'Jab' ? this.stats.jab : this.stats.special;
     this.tag = kind;
@@ -218,6 +220,7 @@ export class Fighter {
       this.vx = this.crouching ? 0 : horiz * sp;
       if (inp.held.up && !this.crouching) {
         this.vy = -JUMP_V;
+        sfx(this.scene, 'jump', 0.4);
         this.vx = horiz * sp * 0.9;
         this.t = 0;
       }

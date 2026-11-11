@@ -11,6 +11,8 @@ export class Controls {
     for (const [action, codes] of Object.entries(KEYMAPS[index])) {
       this.keys[action] = codes.map((c) => scene.input.keyboard.addKey(c, true));
     }
+    // une touche encore enfoncée de l'écran précédent ne doit pas valider l'écran suivant
+    this.born = performance.now();
     this.held = {};
     this.pressed = {};
     for (const a of ACTIONS) { this.held[a] = false; this.pressed[a] = false; }
@@ -38,7 +40,7 @@ export class Controls {
       now.start = now.start || b(9);
     }
     for (const a of ACTIONS) {
-      this.pressed[a] = now[a] && !this.held[a];
+      this.pressed[a] = now[a] && !this.held[a] && performance.now() - this.born > 300;
       this.held[a] = now[a];
     }
   }

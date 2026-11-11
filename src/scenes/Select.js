@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
-import { W, H, FONT, GRID, CHARS, ROSTER } from '../config.js';
+import { W, H, FONT, GRID, CHARS, ROSTER, FLAG_POS } from '../config.js';
 import { Controls } from '../controls.js';
 import { Puppet } from '../anim.js';
+import { music, sfx } from '../audio.js';
 
 const BLINK_MS = 500;
 
@@ -14,6 +15,7 @@ export class Select extends Phaser.Scene {
     const L = this.registry.get('meta')._select;
     this.L = L;
     this.cameras.main.fadeIn(250, 0, 0, 0);
+    music(this, 'music_menu');
     this.add.image(0, 0, 'select_bg').setOrigin(0);
 
     this.controls = [new Controls(this, 0), new Controls(this, 1)];
@@ -25,6 +27,13 @@ export class Select extends Phaser.Scene {
       this.add.image(0, 0, 'card_1p').setOrigin(0).setScale(2).setDepth(5),
       this.add.image(0, 0, 'card_2p').setOrigin(0).setDepth(5),
     ];
+    // drapeau du perso survolé / choisi, planté sur la carte (mât de la couleur du joueur)
+    this.flags = [0xe03030, 0x3050e0].map((color) => {
+      const pole = this.add.rectangle(0, 0, 2, 16, color).setOrigin(0.5, 1).setDepth(4);
+      const img = this.add.image(0, 0, 'flag_Enzo').setOrigin(0, 1).setDepth(4);
+      const outline = this.add.rectangle(0, 0, 18, 15, 0x000000).setOrigin(0, 1).setDepth(3);
+      return { pole, img, outline };
+    });
     this.puppets = [];
     this.portrait = [];
     const boxes = [L.portrait1, L.portrait2];
@@ -45,7 +54,7 @@ export class Select extends Phaser.Scene {
     const objs = [];
     objs.push(this.add.rectangle(0, 0, W, H, 0x000000, 0.8).setOrigin(0));
     const st = (size, color = '#ffffff') => ({ fontFamily: FONT, fontSize: `${size}px`, color, lineSpacing: 6 });
-    objs.push(this.add.text(W / 2, 22, 'TOUCHES', { ...st(26, '#ffe35a'), fontStyle: 'bold' }).setOrigin(0.5, 0));
+    objs.push(this.add.text(W / 2, 22, 'TOUCHES', { ...st(26, '#ff0000'), fontStyle: 'bold' }).setOrigin(0.5, 0));
     objs.push(this.add.text(120, 70, [
       'JOUEUR 1', '', 'Déplacer   Q / D', 'Sauter     Z', 'Baisser    S', 'Poing (A)  F', 'Spécial (B) G', 'Bloquer    tenir la direction',
       '           opposée à l\'adversaire',
@@ -53,7 +62,7 @@ export class Select extends Phaser.Scene {
     objs.push(this.add.text(W - 120, 70, [
       'JOUEUR 2', '', 'Déplacer   ← / →', 'Sauter     ↑', 'Baisser    ↓', 'Poing (A)  K  (pavé num. 1)', 'Spécial (B) L  (pavé num. 2)', 'Bloquer    idem',
     ].join('\n'), st(15, '#9fb4ff')).setOrigin(1, 0));
-    objs.push(this.add.text(W / 2, 250, 'COUPS', { ...st(18, '#ffe35a'), fontStyle: 'bold' }).setOrigin(0.5, 0));
+    objs.push(this.add.text(W / 2, 250, 'COUPS', { ...st(18, '#ff0000'), fontStyle: 'bold' }).setOrigin(0.5, 0));
     const lines = CHARS.map((c) => `${ROSTER[c].label.padEnd(8)} A ${ROSTER[c].jab.name.padEnd(20)} B ${ROSTER[c].special.name}`);
     objs.push(this.add.text(W / 2, 284, lines.join('\n'), st(15)).setOrigin(0.5, 0));
     objs.push(this.add.text(W / 2, H - 56, 'Manette : croix / stick, A ou X = poing, B ou Y = spécial', st(13, '#cfd8dc')).setOrigin(0.5, 0));
@@ -80,14 +89,36 @@ export class Select extends Phaser.Scene {
   // --- sélection ---------------------------------------------------------------------------------
   cellName(p) { return GRID[p.row][p.col]; }
 
+  shownName(i) {
+    const p = this.p[i];
+    if (i === 1 && !p.ok && this.registry.get('mode') === 'ai') return null; // l'IA n'a pas encore choisi
+    if (p.ok && p.random) return null; // le tirage au sort reste caché jusqu'à l'écran VS
+    const name = p.ok ? p.pick : this.cellName(p);
+    return name === 'RANDOM' ? null : name;
+  }
+
+  showFlag(i, name, dx = 0) {
+    const f = this.flags[i];
+    const on = !!name;
+    f.pole.setVisible(on); f.img.setVisible(on); f.outline.setVisible(on);
+    if (!on) return;
+    const { x, y, dir } = FLAG_POS[name];
+    const px = x + dx;
+    f.pole.setPosition(px, y);
+    f.img.setTexture(`flag_${name}`);
+    const fx = dir > 0 ? px + 1 : px - 1 - f.img.width;
+    f.img.setPosition(fx, y - 3);
+    f.outline.setPosition(fx - 1, y - 2);
+  }
+
   refresh() {
     const L = this.L;
     for (let i = 0; i < 2; i++) {
       const p = this.p[i];
-      const name = p.ok ? p.pick : this.cellName(p);
-      const shown = name === 'RANDOM' ? null : name;
+      const shown = this.shownName(i);
       this.cursor[i].setPosition(L.cellX0 + p.col * L.cell + (i === 1 && this.p[0].col === p.col && this.p[0].row === p.row ? 3 : 0),
         L.cellY0 + p.row * L.cell);
+      this.showFlag(i, shown, shown && i === 1 && this.shownName(0) === shown ? 5 : 0);
       if (shown) {
         this.portrait[i].setTexture(`card_${shown}`).setVisible(true);
         if (this.puppets[i].name !== shown) this.puppets[i].setChar(shown);
@@ -103,35 +134,60 @@ export class Select extends Phaser.Scene {
     const p = this.p[i];
     if (p.ok) return;
     const cell = this.cellName(p);
-    p.pick = cell === 'RANDOM' ? Phaser.Utils.Array.GetRandom(CHARS) : cell;
+    p.random = cell === 'RANDOM';
+    p.pick = p.random ? Phaser.Utils.Array.GetRandom(CHARS) : cell;
     p.ok = true;
-    this.puppets[i].setChar(p.pick);
-    this.puppets[i].play('Jab', false);
+    sfx(this, 'pick');
+    if (!p.random) {
+      this.puppets[i].setChar(p.pick);
+      this.puppets[i].play('Jab', false);
+    }
     this.refresh();
+  }
+
+  // l'IA choisit son perso (au hasard, visible) un instant après que le joueur a validé le sien
+  updateAI(delta) {
+    const ai = this.p[1];
+    if (!this.p[0].ok || ai.ok) return;
+    this.aiT = (this.aiT || 0) + delta;
+    if (this.aiT < 600) return;
+    const name = Phaser.Utils.Array.GetRandom(CHARS);
+    GRID.forEach((row, r) => row.forEach((n, c) => { if (n === name) { ai.row = r; ai.col = c; } }));
+    this.confirm(1);
   }
 
   update(_, delta) {
     this.blinkT += delta;
     const locked = this.help.visible;
+    const vsAI = this.registry.get('mode') === 'ai';
+    this.controls.forEach((c) => c.poll());
     for (let i = 0; i < 2; i++) {
-      const c = this.controls[i];
+      // contre l'IA, le joueur peut utiliser les deux claviers ; le cadre 2P est géré par l'ordinateur
+      const c = vsAI && i === 0
+        ? { pressed: Object.fromEntries(Object.keys(this.controls[0].pressed).map((k) => [k, this.controls[0].pressed[k] || this.controls[1].pressed[k]])) }
+        : this.controls[i];
       const p = this.p[i];
-      c.poll();
-      if (!locked) {
+      if (vsAI && i === 1) {
+        this.updateAI(delta);
+      } else if (!locked) {
         if (!p.ok) {
           let moved = false;
           if (c.pressed.left) { p.col = (p.col + 2) % 3; moved = true; }
           if (c.pressed.right) { p.col = (p.col + 1) % 3; moved = true; }
           if (c.pressed.up || c.pressed.down) { p.row = 1 - p.row; moved = true; }
-          if (moved) this.refresh();
+          if (moved) { this.refresh(); sfx(this, 'menu_move'); }
           if (c.pressed.jab || c.pressed.start) this.confirm(i);
         } else if (c.pressed.special) {
+          sfx(this, 'menu_back');
           p.ok = false;
+          if (vsAI) this.p[1].ok = false;
+          this.aiT = 0;
           this.refresh();
         }
       }
       // les cadres clignotent (lentement) tant que le choix n'est pas validé
-      this.cursor[i].setVisible(p.ok || Math.floor(this.blinkT / BLINK_MS) % 2 === 0);
+      const aiWaiting = vsAI && i === 1 && !p.ok;
+      this.cursor[i].setVisible(p.ok || (!aiWaiting && Math.floor(this.blinkT / BLINK_MS) % 2 === 0));
       this.puppets[i].update(delta);
     }
 

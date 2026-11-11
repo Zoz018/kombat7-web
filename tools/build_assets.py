@@ -117,6 +117,14 @@ def main():
         imgs[0].save(OUT / f'card_{c}.png')
 
     # Écran de sélection : fond + cartes recollées par-dessus (efface les cadres 1P/2P dessinés dans le fond)
+    # Drapeaux (drawing/Flags/Flag_<pays>.aseprite) -> flag_<perso>.png
+    flags = {'Enzo': 'France', 'Matthis': 'Corsica', 'Sami': 'Maroc', 'Julien': 'USA', 'Leo': 'Chile'}
+    meta['_flags'] = {}
+    for c, country in flags.items():
+        fw_, fh_, fimgs, _, _ = render(SRC / 'Flags' / f'Flag_{country}.aseprite')
+        fimgs[0].save(OUT / f'flag_{c}.png')
+        meta['_flags'][c] = [fw_, fh_]
+
     W, H, imgs, _, _ = render(SRC / 'Others' / 'Selection_Card.aseprite')
     bg = imgs[0]
     layout = {'Enzo': (0, 0), 'Leo': (1, 0), 'Matthis': (2, 0), 'Sami': (0, 1), 'Julien': (1, 1)}
