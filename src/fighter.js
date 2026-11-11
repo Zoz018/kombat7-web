@@ -285,8 +285,6 @@ export class Fighter {
     }
 
     if (this.flash > 0) sp.setTintFill(0xffffff);
-    else if (this.state === 'hit') sp.setTint(0xff8d8d);
-    else if (this.state === 'block') sp.setTint(0x9fc4ff);
     else sp.clearTint();
 
     const h = Math.max(0, (FLOOR - this.y) / 220);

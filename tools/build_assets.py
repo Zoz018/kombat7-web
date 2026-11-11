@@ -96,7 +96,9 @@ def main():
             r, g, b, a = vp[x, y]
             if (r < 60 and g < 60 and b < 90) or (r > 235 and g > 85):
                 gp[x, y] = (r, g, b, 255)
-    glyph.crop(glyph.getbbox()).save(OUT / 'vs_glyph.png')
+    # vs_glyph.png est retouché à la main : on ne l'écrase jamais s'il existe (le supprimer pour le regénérer)
+    if not (OUT / 'vs_glyph.png').exists():
+        glyph.crop(glyph.getbbox()).save(OUT / 'vs_glyph.png')
 
     # Fond de l'écran Versus : ton dessin sans Enzo/Sami (le dégradé est horizontal -> on recopie la rangée du haut)
     bgv = Image.new('RGBA', v.size, (0, 0, 0, 255))
