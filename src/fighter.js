@@ -118,9 +118,12 @@ export class Fighter {
     this.hp = Math.max(0, this.hp - atk.dmg);
     this.state = 'hit';
     this.stunT = atk.stun;
+    this.t = 0;
+    // si le perso a une anim "Hit" dessinée, elle est étirée sur la durée du stun (et gère son propre flash blanc)
+    this.hitSpeed = this.meta.tags.Hit ? tagMs(this.meta, 'Hit') / atk.stun : 1;
     this.vx = dir * atk.kb;
     this.crouching = false;
-    this.flash = 110;
+    this.flash = this.meta.tags.Hit ? 0 : 110;
     this.atk = null;
     if (attackerState === 'special') this.vy = -420;
     else if (atk.launch) this.vy = -atk.launch;
@@ -175,7 +178,7 @@ export class Fighter {
       case 'hit':
         this.stunT -= dt;
         this.vx *= Math.pow(0.03, s);
-        this.t += dt;
+        this.t += dt * this.hitSpeed;
         if (this.stunT <= 0 && this.grounded) { this.state = 'free'; this.t = 0; }
         break;
       case 'block':
@@ -261,6 +264,9 @@ export class Fighter {
       }
     } else if (this.state === 'jab' || this.state === 'special') {
       frame = frameAt(m, this.tag, this.t);
+    } else if (this.state === 'hit' && m.tags.Hit) {
+      // en l'air on garde la pose de recul maximal tant qu'on n'a pas touché le sol
+      frame = this.grounded ? frameAt(m, 'Hit', this.t) : Math.min(m.tags.Hit[0] + 2, m.tags.Hit[1]);
     } else if (this.state === 'hit' || this.state === 'block') {
       frame = m.tags.Idle[0];
     } else if (this.state === 'ko') {
